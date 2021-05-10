@@ -147,6 +147,8 @@ class SimCSEDataSet(IterableDataset):
         while count<len(self.idxs):
             selected_ids=self.idxs[count:count+self.batch_size]
             inputs={k: v[selected_ids].repeat(2,1) for k,v in self.tokenized_a.items()}
-            label=
-            yield inputs
-            count+=32
+            idx1=torch.arange(self.batch_size*2)[None, :]
+            idx2=(idx1.T+self.batch_size)%(self.batch_size*2)
+            label = idx1 == idx2
+            yield {'inputs': inputs, 'label': label}
+            count+=self.batch_size

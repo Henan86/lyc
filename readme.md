@@ -8,13 +8,34 @@
   - 常用的`torch Dataset`对象。
 - `utils.py`:所有可能有用的工具。
   - `get_tokenizer`, `get_model`, `to_gpu`, `get_optimizer_and_schedule`
-- TODO: `train_loop.py`
-- TODO: `eval_loop.py`
-  - `eval`需要针对不同task解决
-  - [ ] `classification_eval`
-  - [ ] `text_generation_eval`
-  - [ ] `multi-choice_eval`
-  - [ ] `span-selection_eval`
-  - [ ] `labeling_eval`
+
+
+## `train_loop.py`
+- [x] `train_step`
+- [ ] `train_loop` 不要`eval`的单纯训练循环
+- [x] `trainer`对象
+  - 自定义的`trainer`对象需要实现：
+  - [x] 带`eval`的`train_func`
+    - 传入一个`eval_func`, which takes `logits/preds` and a `logger` as inputs, computing insides, returns nothing.
+  - [x] `logger`
+  - [x] `save`
+
+## `eval_loop.py`
+已支持的`metrics_computing`方法
+- [x] `accuracy`
+
+
+`eval`可能需要针对不同task解决
+- [x] `general_eval` 最简单的直接使用`y_pred`和`y_true`算`metrics`.
+- [ ] `classification_eval`
+- [ ] `text_generation_eval`
+- [ ] `multi-choice_eval`
+- [ ] `span-selection_eval`
+- [ ] `labeling_eval`
 - TODO: `trainer.py`: 需要对`transformers.trainer`进行包装
 - TODO: 评估是否需要对`pytorch_lightning`进行高级封装，包括`model` and `trainer`.
+
+
+## 测试
+
+- [ ] `train_loop.trainer`
