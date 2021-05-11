@@ -3,6 +3,8 @@ from transformers import (
     BertModel,
     AutoModel,
 )
+import torch
+import torch.nn.functional as F
 
 """
 Model 对象的开发规范。
@@ -77,6 +79,37 @@ class SentenceEmbeddingModel(nn.Module):
         )
 
         return sentence_embedding
+
+
+class simcse(SentenceEmbeddingModel):
+
+    def forward(self, *args, **kwargs):
+        label = kwargs.pop('label')
+        embeddings=super(simcse, self).forward(*args, **kwargs)
+        loss = self.cce_losses(label, embeddings)
+
+        return {'loss': loss}
+    
+    def nll_losses(self, label, embeddings):
+
+        label=F.one_hot(label)
+        normalized_embedding = embeddings/torch.sqrt((embeddings**2).sum(-1))[:, None]
+        sims=torch.matmul(normalized_embedding, normalized_embedding.T)
+        sims = sims - torch.eye(embeddings.shape[0])*100
+
+        sims.clip_(0,1)
+        loss = F.binary_cross_entropy(sims.view(-1), label.view(-1).float())
+        
+        return loss
+
+    def cce_losses(self, label, embeddings):
+
+        normalized_embedding = embeddings/torch.sqrt((embeddings**2).sum(-1))[:, None]
+        sims=torch.matmul(normalized_embedding, normalized_embedding.T)
+        sims=sims*20 - torch.eye(embeddings.shape[0])*1e12
+
+        loss=F.cross_entropy(label, sims)
+        return loss
 
 
 MODELS={

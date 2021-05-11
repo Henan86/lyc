@@ -46,7 +46,7 @@
 对常用的模型进行包装并统一接口，目前主要就是`huggingface`的模型。还有在此基础上各种衍生模型。
 
 - [ ] BERT
-- [ ] SentenceEmbeddingModel
+- [x] SentenceEmbeddingModel
 - [ ] AutoModel
 - [ ] AutoModelFor ...
 
