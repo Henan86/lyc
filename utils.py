@@ -1,11 +1,12 @@
 from transformers import (BertModel,
                           BertTokenizer,
                           AutoModel,
-                          AutoTokenizer)
+                          AutoTokenizer,
+                          PreTrainedModel)
 from datasets import load_dataset, Dataset as hfds
 from torch.utils.data import DataLoader, TensorDataset, Dataset
 from tqdm import tqdm
-from model import SentencePairEmbedding
+from model import MODELS, WAPPERS
 import numpy as np
 import torch
 from torch.optim import AdamW
@@ -15,18 +16,30 @@ import os
 import pickle
 
 
-def get_model(model_class, model_name, cache_dir=None, **kwargs):
-    model=model_class.from_pretrained(model_name, cache_dir=cache_dir, **kwargs)
+def get_model(model_class, model_name, **kwargs):
+    """
+    该方法载入模型。
+
+    Args:
+        model_class: 
+
+    """
+    if model_class in WAPPERS:
+        model=model_class(model_name, **kwargs)
+    elif issubclass(model_class, PreTrainedModel):
+        model=model_class.from_pretrained(model_name, **kwargs)
+    else:
+        raise ValueError()
+
     if torch.cuda.is_available():
         model.to('cuda')
         if torch.cuda.device_count()>1:
             model=torch.nn.DataParallel(model)
     return model
 
-def get_tokenizer(tokenizer_name, cache_dir=None, **kwargs):
-    is_zh=kwargs.pop('is_zh', None)
-    if is_zh is not None:
-        tokenizer=BertTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
+def get_tokenizer(tokenizer_name, cache_dir=None, is_zh=None, **kwargs):
+    if is_zh:
+        tokenizer=BertTokenizer.from_pretrained(tokenizer_name, cache_dir=cache_dir, **kwargs)
     else:
         tokenizer=AutoTokenizer.from_pretrained(tokenizer_name, cache_dir=cache_dir, **kwargs)
     return tokenizer

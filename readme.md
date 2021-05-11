@@ -39,3 +39,21 @@
 ## 测试
 
 - [ ] `train_loop.trainer`
+
+
+## `model.py`
+
+对常用的模型进行包装并统一接口，目前主要就是`huggingface`的模型。还有在此基础上各种衍生模型。
+
+- [ ] BERT
+- [ ] SentenceEmbeddingModel
+- [ ] AutoModel
+- [ ] AutoModelFor ...
+
+## `trainer.py`
+
+包装`pytorch_lightning`, `pytorch` and `huggingface`的`trainer`对象。
+
+- [ ] `pytorch`
+- [ ] `huggingface`
+- [ ] `pytorch_lightning`
