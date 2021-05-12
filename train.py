@@ -3,6 +3,9 @@ from torch.utils.tensorboard import SummaryWriter
 from utils import *
 from tqdm import tqdm
 import os
+from dataclasses import dataclass
+import argparse
+
 
 def train_step(
     model, batch, optimizer, lr_schedule=None, clip_grad=None
@@ -101,3 +104,36 @@ class LycTrainer:
                         self.save(model.module, global_current_step)
                     else:
                         self.save(self.model, global_current_step)
+
+@dataclass
+class TrainingArgs:
+    # must claim
+    train_data : str = None
+    save_path : str = None
+    # data
+    eval_data_path : str = None
+    min_sent_len : int = 10
+    max_sent_len : int = 256
+    data_workers : int = 8
+    tokenizer_name_or_path = None
+    # train
+    lr: float = 5e-5
+    # model
+    model_name_or_path : str = None
+
+
+def get_general_args():
+
+    parser = argparse.ArgumentParser()
+
+    for arg, content in TrainingArgs.__dataclass_fields__.items():
+        parser.add_argument('--'+arg, type=content.type, default=content.default)
+    
+    args = parser.parse_args()
+    args=vars(args)
+    train_args = TrainingArgs(**args)
+
+    return train_args
+
+def show_all_args():
+    print(TrainingArgs.__doc__)

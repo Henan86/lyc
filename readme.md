@@ -57,3 +57,14 @@
 - [ ] `pytorch`
 - [ ] `huggingface`
 - [ ] `pytorch_lightning`
+
+## `pipelines`
+
+- [x] `BertWhitening`
+
+## 支持的`Dataset`
+
+- atec
+- zh_wiki
+- [ ] en_wiki
+- [ ] zh_csqa
