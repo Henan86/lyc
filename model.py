@@ -33,7 +33,8 @@ class SentenceEmbeddingModel(nn.Module):
             'cls': self._cls_pooling,
             'last-average': self._average_pooling,
             'first-last-average': self._first_last_average_pooling,
-            'cls-pooler': self._cls_pooler_pooling
+            'cls-pooler': self._cls_pooler_pooling,
+            'hidden': self._return_hidden,
         }
     
     def forward(self, input_ids,
@@ -46,6 +47,9 @@ class SentenceEmbeddingModel(nn.Module):
         pooler_outputs=outputs.pooler_output
         
         return self.pooling_funcs[self.pooling_type](hidden, attention_mask, pooler_outputs)
+
+    def _return_hidden(self, hidden, attention_mask, pooled_outputs):
+        return hidden
     
     def _cls_pooling(self, hidden, attention_mask, pooled_outputs):
         last_hidden_state=hidden[-1]

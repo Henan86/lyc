@@ -4,9 +4,9 @@ from transformers import (BertModel,
                           AutoTokenizer,
                           PreTrainedModel)
 from datasets import load_dataset, Dataset as hfds
-from torch.utils.data import DataLoader, TensorDataset, Dataset
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
-from model import MODELS, WAPPERS
+from .model import MODELS, WAPPERS
 import numpy as np
 import torch
 from torch.optim import AdamW
@@ -14,6 +14,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from sklearn.metrics import accuracy_score
 import os
 import pickle
+from .data import get_dataloader
 
 
 def get_model(model_class, model_name, **kwargs):
@@ -21,7 +22,12 @@ def get_model(model_class, model_name, **kwargs):
     该方法载入模型。
 
     Args:
-        model_class: 
+        model_class: 模型对象，支持lyc.model中定义的模型和huggingface支持的模型。
+        model_name: base model 的 name 或 path
+        cache_dir: （optional） from_pretrained 方法需要的参数
+    
+    Return：
+        model: model object
 
     """
     if model_class in WAPPERS:
@@ -38,49 +44,62 @@ def get_model(model_class, model_name, **kwargs):
     return model
 
 def get_tokenizer(tokenizer_name, cache_dir=None, is_zh=None, **kwargs):
+    """
+        Args:
+            tokenizer_name: name or path
+            cache_dir=None:
+            is_zh=None:
+    """
+
     if is_zh:
         tokenizer=BertTokenizer.from_pretrained(tokenizer_name, cache_dir=cache_dir, **kwargs)
     else:
         tokenizer=AutoTokenizer.from_pretrained(tokenizer_name, cache_dir=cache_dir, **kwargs)
     return tokenizer
 
+def get_vectors(model, tokenized_sents):
+    """
+    使用model.SentenceEmbeddingModel获取句向量。
+
+    Args:
+        model:
+        tokenized_sents: BatchedEncoding
+    
+    Return:
+        Tensor([batch_size, embedding_dim])
+
+    """
+    ds=hfds.from_dict(tokenized_sents)
+    dl=get_dataloader(ds, cols=['input_ids', 'attention_mask', 'token_type_ids'])
+    a_results=[]
+    for batch in tqdm(dl):
+        if torch.cuda.is_available():
+            batch=[to_gpu(i) for i in batch]
+        output = model(**batch)
+        a_embedding = output
+        a_results.append(a_embedding)
+    output=torch.cat(a_results)
+    return output
+
 def to_gpu(inputs):
+    """
+    to_gpu
+
+    Args:
+        inputs: Tensor / dict([Tensor])
+    """
     if isinstance(inputs, dict):
         return {
             k:v.to('cuda') for k,v in inputs.items()
         }
     else:
         return inputs.to('cuda')
-
-class SentencePairDataset(Dataset):
-    def __init__(self, tokenized_a, tokenized_b=None, label=None):
-        self.tokenized_a=tokenized_a
-        self.tokenized_b=tokenized_b
-        self.label=label
-
-    def __len__(self):
-        return self.tokenized_a['input_ids'].shape[0]
-
-    def __getitem__(self, index):
-        input_a = {
-            k:v[index] for k,v in self.tokenized_a.items()
-        }
-        output=(input_a, )
-        if self.tokenized_b is not None:
-            input_b={
-                k:v[index] for k,v in self.tokenized_b.items()
-            }
-            output+=(input_b, )
-        if self.label is not None:
-            output+=(torch.LongTensor([self.label[index]]), )
-        return output
-
-def get_dataloader(tokenized_a, tokenized_b=None, batch_size=16, label=None):
-    ds=SentencePairDataset(tokenized_a, tokenized_b, label=label)
-    dl = DataLoader(ds, batch_size=batch_size, shuffle=True, pin_memory=True)
-    return dl
         
 def compute_kernel_bias(vecs):
+    """
+    BertWhitening 计算SVD需要的kernel和bias
+    """
+
     vecs=np.concatenate(vecs)
     mean=vecs.mean(axis=0, keepdims=True)
     cov=np.cov(vecs.T)
@@ -89,11 +108,18 @@ def compute_kernel_bias(vecs):
     return W, -mean
 
 def transform_and_normalize(vecs, kernel, bias):
+    """
+    BertWhitening 白化向量
+    """
     vecs = (vecs + bias).dot(kernel)
     norms = (vecs**2).sum(axis=1, keepdims=True)**0.5
     return vecs / np.clip(norms, 1e-8, np.inf)
 
 def get_optimizer_and_schedule(model, num_training_steps=None, num_warmup_steps=3000):
+    """
+    获取optimizer和schedule
+    """
+
     # params=[{'params': [param for name, param in model.named_parameters() if 'sbert' not in name], 'lr': 5e-5},
     # {'params': [param for name, param in model.named_parameters() if 'sbert' in name], 'lr': 1e-3}]
     
@@ -134,7 +160,13 @@ def eval(model, tokenizer, ds='atec', n_components=768):
     return accuracy_score(sims>0.5, label)
 
 def save_kernel_and_bias(kernel, bias, model_path):
+    """
+    BertWhitening 保存SVD需要的kernel和bias
+    """
     np.save(os.path.join(model_path, 'kernel.npy'), kernel)
     np.save(os.path.join(model_path, 'bias.npy'), bias)
     
     print(f'Kernal and bias saved in {os.path.join(model_path, "kernel.npy")} and {os.path.join(model_path, "bias.npy")}')
+
+def vector_l2_normlize(vecs):
+    return vecs/np.sqrt((vecs**2).sum(axis=1, keepdims=True))
