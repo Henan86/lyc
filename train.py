@@ -110,30 +110,53 @@ class TrainingArgs:
     # must claim
     train_data : str = None
     save_path : str = None
+    dataset_scripts : str = None
     # data
     eval_data_path : str = None
     min_sent_len : int = 10
     max_sent_len : int = 256
     data_workers : int = 8
-    tokenizer_name_or_path = None
+    tokenizer_name_or_path : str = None
     # train
-    lr: float = 5e-5
+    lr: float = 1e-3
+    sm_lr : float = 5e-5
+    weight_decay : float = 1e-5
+    early_stop : bool = None
+    accum_grad : int = 1
+    log_path : str = '/logs'
+    root_dir : str = '/checkpoints'
+    epoches : int = None
+    log_steps : int = 500
+    version : str = 'v0.1'
+    share_emb_prj_weight : bool = True
     # model
     model_name_or_path : str = None
+    cache_dir : str = None
+    # optimizer
+    
 
 
-def get_general_args():
+def get_args(Args = TrainingArgs):
+    """
+    解析命令行参数，并返回一个所有命中的args。
+    Args：
+        Args: (optional) dataclass, 默认为TrainingArgs， 可以集成TrainingArgs加入个性化参数
+
+    Return：
+        train_args: datacalss
+
+    """
 
     parser = argparse.ArgumentParser()
 
-    for arg, content in TrainingArgs.__dataclass_fields__.items():
+    for arg, content in Args.__dataclass_fields__.items():
+        if content.type == bool:
+            parser.add_argument('--'+arg, action='store_true')
+            continue
         parser.add_argument('--'+arg, type=content.type, default=content.default)
     
     args = parser.parse_args()
     args=vars(args)
-    train_args = TrainingArgs(**args)
+    train_args = Args(**args)
 
     return train_args
-
-def show_all_args():
-    print(TrainingArgs.__doc__)

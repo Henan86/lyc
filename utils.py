@@ -115,7 +115,9 @@ def transform_and_normalize(vecs, kernel, bias):
     norms = (vecs**2).sum(axis=1, keepdims=True)**0.5
     return vecs / np.clip(norms, 1e-8, np.inf)
 
-def get_optimizer_and_schedule(model, num_training_steps=None, num_warmup_steps=3000):
+def get_optimizer_and_schedule(params, lr, 
+            beta=(0.9, 0.999), eps=1e-8, weight_decay=1e-5,
+            num_training_steps=None, num_warmup_steps=3000):
     """
     获取optimizer和schedule
     """
@@ -123,7 +125,7 @@ def get_optimizer_and_schedule(model, num_training_steps=None, num_warmup_steps=
     # params=[{'params': [param for name, param in model.named_parameters() if 'sbert' not in name], 'lr': 5e-5},
     # {'params': [param for name, param in model.named_parameters() if 'sbert' in name], 'lr': 1e-3}]
     
-    optimizer=AdamW(model.parameters())
+    optimizer=AdamW(params, lr=lr, betas=beta, eps=eps, weight_decay=weight_decay)
 
     if num_training_steps is None:
         return optimizer
@@ -170,3 +172,26 @@ def save_kernel_and_bias(kernel, bias, model_path):
 
 def vector_l2_normlize(vecs):
     return vecs/np.sqrt((vecs**2).sum(axis=1, keepdims=True))
+
+def get_pl_callbacks(args):
+    """
+    载入pytorch_lightning.callbacks
+
+    Return:
+        EarlyStoppingCallbacks
+        LearningRateMonitor
+
+    TODO
+    """
+
+    from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+
+    return {
+        'checkpoint': ModelCheckpoint(
+            dirpath=args.save_path,
+            filename='{epoch}-{loss:.2f}',
+            prefix=args.version
+        ),
+        'lr_monitor': LearningRateMonitor()
+    }
+

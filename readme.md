@@ -10,7 +10,7 @@
   - `get_tokenizer`, `get_model`, `to_gpu`, `get_optimizer_and_schedule`
 
 
-## `train_loop.py`
+## `train.py`
 - [x] `train_step`
 - [ ] `train_loop` 不要`eval`的单纯训练循环
 - [x] `trainer`对象
@@ -19,6 +19,9 @@
     - 传入一个`eval_func`, which takes `logits/preds` and a `logger` as inputs, computing insides, returns nothing.
   - [x] `logger`
   - [x] `save`
+- [x] argparser: 处理args的通用parser，包含了大多数常见参数
+  - [x] 调用`train.show_all_args`查看所有可用args
+  - [x] `get_general_args`直接获取所有常用args
 
 ## `eval_loop.py`
 已支持的`metrics_computing`方法

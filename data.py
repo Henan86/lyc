@@ -13,7 +13,7 @@ import torch
 import os
 import pickle
 
-def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_proc=None, shuffle=False, tokenize_type='general'):
+def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_proc=None, shuffle=False, tokenize_func='general', **kwargs):
     """
     Given huggingface dataset-loading scripts and datapath, return processed datasets.
 
@@ -72,10 +72,25 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
             results.update(out_)
         return results
 
+    # def _tokenize4(ds):
+    #     results={}
+    #     for k,v in ds.items():
+    #         if k == 'label':
+    #             results[k]=v
+    #             continue
+    #         out_=tokenizer(v, max_length=max_length, padding=True, truncation=True, return_length=True, return_offsets_mapping=True)
+    #         out_['real_length'] = [len(i) - 2 for i in out_['offset_mapping']]
+    #         out_['length'] = out_['length']
+    #         out_.pop('offset_mapping')
+    #         results.update(out_)
+    #         results['length'] = results['length'] - 2
+
+    #     return results
+
     tokenize_funcs={
         'nested': _tokenize1,
         'with_prefix': _tokenize2,
-        'general': _tokenize3
+        'general': _tokenize3,
     }
     
     def _get_col_names(col_names):
@@ -87,7 +102,7 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
                 cols_needed_removed.update(v)
             return cols_needed_removed
 
-    ds=load_dataset(scripts, data_path=path)
+    ds=load_dataset(scripts, data_path=path, **kwargs)
 
     # if ds_name in ds.column_names.keys():
     #     ds=ds[ds_name]
@@ -103,7 +118,7 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
     cols_needed_removed=_get_col_names(ds.column_names)
 
     ds = ds.map(
-        tokenize_funcs[tokenize_type],
+        tokenize_funcs[tokenize_func],
         remove_columns=cols_needed_removed,
         batched=True,
         num_proc=num_proc
@@ -168,26 +183,42 @@ class SimCSEDataSet(IterableDataset):
             yield {'inputs': inputs, 'label': label}
             count+=self.batch_size
 
-def lm_group_texts(examples):
-    """
-    将离散句子合并为block_size长度的文本输入
-    需要外界环境有一个block_size变量
+class processor:
 
-    """
+    block_size : int = 512
+    tokenizer = None
 
-    # Concatenate all texts.
-    concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
-    total_length = len(concatenated_examples[list(examples.keys())[0]])
-    # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-    # customize this part to your needs.
-    total_length = (total_length // block_size) * block_size
-    # Split by chunks of max_len.
-    result = {
-        k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
-        for k, t in concatenated_examples.items()
-    }
-    result["labels"] = result["input_ids"].copy()
-    return result
+    @classmethod
+    def lm_group_texts(cls, examples):
+        """
+        将离散句子合并为block_size长度的文本输入
+        需要外界环境有一个block_size变量
+
+        """
+
+        # Concatenate all texts.
+        concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
+        total_length = len(concatenated_examples[list(examples.keys())[0]])
+        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+        # customize this part to your needs.
+        total_length = (total_length // cls.block_size) * cls.block_size
+        # Split by chunks of max_len.
+        result = {
+            k: [t[i : i + cls.block_size] for i in range(0, total_length, cls.block_size)]
+            for k, t in concatenated_examples.items()
+        }
+        result["labels"] = result["input_ids"].copy()
+        return result
+
+    @classmethod
+    def get_true_length(cls, examples):
+        assert cls.tokenizer is not None
+        print(f'Tokenizer_type: {cls.tokenizer.name_or_path}, should check the n_real method.')
+        examples['n'] = [sum(i) - 2 for i in examples['attention_mask']]
+        examples['n_real'] = [sum([0 if cls.tokenizer.convert_ids_to_tokens(i).startswith('##') 
+                            else 1 for i in line]) - 2 for line in examples['input_ids']]
+        return examples
+
 
 if __name__ == '__main__':
     from utils import get_tokenizer
