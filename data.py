@@ -71,6 +71,16 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
             out_=tokenizer(v, max_length=max_length, padding=True, truncation=True)
             results.update(out_)
         return results
+    
+    def _tokenize4(ds):
+        results={}
+        for k,v in ds.items():
+            if k == 'label':
+                results[k]=v
+                continue
+            out_=tokenizer(v, return_token_type_ids = False)
+            results.update(out_)
+        return results
 
     # def _tokenize4(ds):
     #     results={}
@@ -91,6 +101,7 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
         'nested': _tokenize1,
         'with_prefix': _tokenize2,
         'general': _tokenize3,
+        'wo_padding': _tokenize4
     }
     
     def _get_col_names(col_names):
@@ -192,8 +203,7 @@ class processor:
     def lm_group_texts(cls, examples):
         """
         将离散句子合并为block_size长度的文本输入
-        需要外界环境有一个block_size变量
-
+        需要设定processor的block_size变量
         """
 
         # Concatenate all texts.
