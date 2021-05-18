@@ -189,8 +189,7 @@ def get_pl_callbacks(args):
     return {
         'checkpoint': ModelCheckpoint(
             dirpath=args.save_path,
-            filename='{epoch}-{loss:.2f}',
-            prefix=args.version
+            filename='{args.prefix}-{epoch}-{loss:.2f}',
         ),
         'lr_monitor': LearningRateMonitor()
     }

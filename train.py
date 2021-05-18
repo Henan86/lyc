@@ -129,6 +129,7 @@ class TrainingArgs:
     log_steps : int = 500
     version : str = 'v0.1'
     share_emb_prj_weight : bool = True
+    batch_size : int = 32
     # model
     model_name_or_path : str = None
     cache_dir : str = None

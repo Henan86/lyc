@@ -101,7 +101,7 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
         'nested': _tokenize1,
         'with_prefix': _tokenize2,
         'general': _tokenize3,
-        'wo_padding': _tokenize4
+        'no_padding': _tokenize4
     }
     
     def _get_col_names(col_names):
