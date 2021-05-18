@@ -127,7 +127,8 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
     ds = _slice(ds, slice) if slice else ds
 
     cols_needed_removed=_get_col_names(ds.column_names)
-
+    
+    print(ds)
     ds = ds.map(
         tokenize_funcs[tokenize_func],
         remove_columns=cols_needed_removed,
