@@ -12,7 +12,7 @@ FEATURES = datasets.Features(
 @dataclass
 class WikiConfig(datasets.BuilderConfig):
 
-    data_dir : str = None
+    data_path : str = None
     min_sent_length : int = 10
     chunksize : int = 10 << 20
     encoding = 'utf-8'
@@ -27,15 +27,15 @@ class wiki(datasets.ArrowBasedBuilder):
 
     def _split_generators(self, dl_manager):
 
-        if not self.config.data_dir:
-            raise ValueError(f"Data Dir must be specified, but got data_dir={self.config.data_dir}")
+        if not self.config.data_path or not os.path.isdir(self.config.data_path):
+            raise ValueError(f"Data Dir must be specified, but got data_path={self.config.data_path}")
 
-        return [datasets.SplitGenerator(name='train', gen_kwargs={"data_dir": self.config.data_dir})]
+        return [datasets.SplitGenerator(name='train', gen_kwargs={"data_path": self.config.data_path})]
     
-    def _generate_tables(self, data_dir):
+    def _generate_tables(self, data_path):
         batch_idx = 0
-        files = os.listdir(data_dir)
-        files = [os.path.join(data_dir, file) for file in files]
+        files = os.listdir(data_path)
+        files = [os.path.join(data_path, file) for file in files]
         print('Files to process: ', files)
         for file in files:
             with open(file, "r", encoding=self.config.encoding) as f:
