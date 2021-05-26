@@ -13,7 +13,8 @@ import torch
 import os
 import pickle
 
-def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_proc=None, shuffle=False, tokenize_func='general', **kwargs):
+def get_tokenized_ds(scripts, path, tokenizer, max_length=64,
+            slice=None, num_proc=None, shuffle=False, tokenize_func='general', cache_file_names=None, **kwargs):
     """
     Given huggingface dataset-loading scripts and datapath, return processed datasets.
 
@@ -133,7 +134,8 @@ def get_tokenized_ds(scripts, path, tokenizer, max_length=64, slice=None, num_pr
         tokenize_funcs[tokenize_func],
         remove_columns=cols_needed_removed,
         batched=True,
-        num_proc=num_proc
+        num_proc=num_proc,
+        cache_file_names=cache_file_names
     )
 
     if shuffle:
