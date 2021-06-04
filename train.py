@@ -5,7 +5,7 @@ from tqdm import tqdm
 import os
 from dataclasses import dataclass
 import argparse
-
+from transformers import Trainer, TrainingArguments, HfArgumentParser
 
 def train_step(
     model, batch, optimizer, lr_schedule=None, clip_grad=None
@@ -35,13 +35,36 @@ def train_step(
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad)
 
     optimizer.step()
-    lr_schedule.step()
+    if lr_schedule is not None:
+        lr_schedule.step()
 
-    return loss
+    return loss, model, optimizer, lr_schedule
 
-def train_loop():
-    pass
+def train_loop(
+    epoches, dl, model, optimizer, writer=None, lr_schedule=None, eval_func=None, **eval_args
+):
+    """[summary]
 
+    Args:
+        epoches (int): [description]
+        dl ([type]): [description]
+        model ([type]): [description]
+        optim ([type]): [description]
+        writer ([type], optional): TensorBoard SummaryWriter 对象. Defaults to None.
+        lr_schedule ([type], optional): [description]. Defaults to None.
+    """
+    num_steps_per_epoches = len(dl)
+    for epoch in range(epoches):
+        for idx, batch in tqdm(dl, desc=f'Training for {epoch}th epoch: '):
+            loss, model, optimizer, lr_schedule = train_step(model, batch, optimizer, lr_schedule=lr_schedule)
+
+            if writer is not None:
+                writer.add_scalar('loss', loss, num_steps_per_epoches*(epoch+1) + idx)
+            
+            if eval_func is not None:
+                eval_func(**eval_args)
+    return model
+            
 
 class LycTrainer:
     def __init__(
@@ -133,9 +156,9 @@ class TrainingArgs:
     # model
     model_name_or_path : str = None
     cache_dir : str = None
+    #eval
+    eval_batch_size : int = 16
     # optimizer
-    
-
 
 def get_args(Args = TrainingArgs):
     """
@@ -161,3 +184,129 @@ def get_args(Args = TrainingArgs):
     train_args = Args(**args)
 
     return train_args
+
+def parse_hf_args(Args, json=None):
+    """从命令行解析参数，并返回Hf的TrainingArguments对象。
+
+    """
+    parser = HfArgumentParser(Args)
+    if json is not None:
+        args = parser.parse_json_file(json_file=json)
+    else:
+        args=parser.parse_args_into_dataclasses()
+    return args
+
+def convert_lyc_arguments_to_hf(Args: TrainingArgs, **kwargs):
+    return TrainingArguments(
+        
+    )
+
+def get_base_hf_args(
+    output_dir,
+    **kwargs
+):
+    """[summary]
+
+    Args:
+        output_dir (str): [description]
+        evaluation_strategy (str, optional): IntervalStrategy:['no', 'step', 'epoch]. Defaults to 'no'.
+        train_batch_size (int, optional): [description]. Defaults to 8.
+        eval_batch_size (int, optional): [description]. Defaults to 8.
+        gradient_accumulation_steps (int, optional): [description]. Defaults to 1.
+        eval_accumulation_steps (int, optional): [description]. Defaults to None.
+        lr (float, optional): [description]. Defaults to 5e-05.
+        weight_decay (float, optional): [description]. Defaults to 1e-5.
+        max_grad_norm (float, optional): 梯度剪裁，防止爆炸. Defaults to 1.0.
+        epochs (float, optional): [description]. Defaults to 3.0.
+        max_steps (int, optional): [description]. Defaults to -1.
+        lr_scheduler_type (str, optional): 
+                可选的有['linear', 'cosine', 'polynomial', 'constant', 'constant_whti_warmup', 'consine_with_restart'].
+                Defaults to 'linear'.
+        warmup_ratio (float, optional): 花费总步数中的多少用于warm_up，小数. Defaults to 0.0.
+        warmup_steps (int, optional): 花费多少步数来warm_up. Defaults to 0.
+        logging_dir (str, optional): [description]. Defaults to './logs'.
+        logging_strategy ([type], optional): 可选的有['no','epoch','steps'].
+                其中 'steps' 选项与logging_steps配合使用。 Defaults to None.
+        logging_steps (int, optional): [description]. Defaults to 500.
+        save_strategy ([type], optional): 可选的有['no','epoch','steps'].
+                其中 'steps' 选项与save_steps配合使用。. Defaults to None.
+        save_steps (int, optional): [description]. Defaults to 500.
+        save_total_limit (int, optional): 最多保存多少个，删除更旧的checkpoints. Defaults to 3.
+        seed (int, optional): [description]. Defaults to 1111.
+        eval_steps (int, optional): [description]. Defaults to 500.
+        dataloader_num_workers (int, optional): [description]. Defaults to 0.
+        run_name (str, optional): 好像没用，待测试. Defaults to '.'.
+
+        --- 以下，除特殊情况外无用 ---
+        ignore_data_skip (bool, optional): 重启训练的时候要不要跳过已训练过的数据. Defaults to False.
+        skip_memory_metrics (bool, optional): 要不要log内存占用情况. Defaults to False.
+        report_to ([type], optional): 使用哪些logging模块. Defaults to None.
+        length_column_name ([type], optional): [description]. Defaults to length.
+        group_by_length (bool, optional): [description]. Defaults to True.
+        past_index (int, optional): [description]. Defaults to -1.
+        load_best_model_at_end (bool, optional): 与metric_for_best_model配合使用. Defaults to False.
+        metric_for_best_model ([type], optional): 用哪个指标比较model checkpoints，默认是evaluation loss. Defaults to None.
+        greater_is_better ([type], optional): 指标是否越大越好. Defaults to None.
+    """
+    defaults_args={
+        "evaluation_strategy":'no',
+        "train_batch_size":8,
+        "eval_batch_size":8,
+        "gradient_accumulation_steps":1,
+        "eval_accumulation_steps":None,
+        "lr": 5e-05,
+        "weight_decay":1e-5,
+        "max_grad_norm":1.0,
+        "epochs":3.0,
+        "max_steps":-1,
+        "lr_scheduler_type":'linear',
+        "warmup_ratio":0.0,
+        "warmup_steps":0,
+        "logging_dir":'./logs',
+        "logging_strategy":'steps',
+        "logging_steps":500,
+        "save_strategy":'epoch',
+        "save_steps":500,
+        "save_total_limit":3,
+        "seed":1111,
+        "eval_steps":500,
+        "dataloader_num_workers":0,
+        "run_name":None,
+        "ignore_data_skip":False,
+        "skip_memory_metrics":False,
+        "report_to":None,
+        "length_column_name":'length',
+        "group_by_length":True,
+        "past_index":-1,
+        "load_best_model_at_end":False,
+        "metric_for_best_model":None,
+        "greater_is_better":None
+    }
+    defaults_args.update(kwargs)
+    defaults_args['learning_rate']=defaults_args['lr']
+    defaults_args['per_device_train_batch_size']=defaults_args['train_batch_size']
+    defaults_args['per_device_eval_batch_size']=defaults_args['eval_batch_size']
+    defaults_args['num_train_epochs']=defaults_args['epochs']
+    del defaults_args['lr'], defaults_args['train_batch_size'], defaults_args['eval_batch_size'], defaults_args['epochs']
+
+    return TrainingArguments(output_dir, **defaults_args)
+
+class HfTrainer(Trainer):
+    def _get_eval_sampler(self, eval_dataset):
+        if isinstance(self.eval_dataset, torch.utils.data.IterableDataset) or not isinstance(
+            self.eval_dataset, collections.abc.Sized
+        ):
+            return None
+        if is_torch_tpu_available():
+            return SequentialDistributedSampler(eval_dataset, num_replicas=xm.xrt_world_size(), rank=xm.get_ordinal())
+        elif is_sagemaker_mp_enabled():
+            return SequentialDistributedSampler(
+                eval_dataset,
+                num_replicas=smp.dp_size(),
+                rank=smp.dp_rank(),
+                batch_size=self.args.per_device_eval_batch_size,
+            )
+        elif self.args.local_rank != -1:
+            return SequentialDistributedSampler(eval_dataset)
+        else:
+            return SequentialSampler(eval_dataset)

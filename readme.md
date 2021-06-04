@@ -12,7 +12,7 @@
 
 ## `train.py`
 - [x] `train_step`
-- [ ] `train_loop` 不要`eval`的单纯训练循环
+- [x] `train_loop` 不要`eval`的单纯训练循环
 - [x] `trainer`对象
   - 自定义的`trainer`对象需要实现：
   - [x] 带`eval`的`train_func`
@@ -35,17 +35,14 @@
 - [ ] `multi-choice_eval`
 - [ ] `span-selection_eval`
 - [ ] `labeling_eval`
-- TODO: `trainer.py`: 需要对`transformers.trainer`进行包装
 - TODO: 评估是否需要对`pytorch_lightning`进行高级封装，包括`model` and `trainer`.
 
 
 ## 测试
-
 - [ ] `train_loop.trainer`
 
 
 ## `model.py`
-
 对常用的模型进行包装并统一接口，目前主要就是`huggingface`的模型。还有在此基础上各种衍生模型。
 
 - [ ] BERT
@@ -53,13 +50,40 @@
 - [ ] AutoModel
 - [ ] AutoModelFor ...
 
-## `trainer.py`
+## 修改`transformers.Trainer`
 
-包装`pytorch_lightning`, `pytorch` and `huggingface`的`trainer`对象。
+### TODO
 
-- [ ] `pytorch`
-- [ ] `huggingface`
-- [ ] `pytorch_lightning`
+- [ ] Trainer.add_callback(
+- [ ] Trainer.call_model_init(
+- [ ] Trainer.compute_loss(
+- [ ] Trainer.create_optimizer(
+- [ ] Trainer.create_optimizer_and_scheduler(
+- [ ] Trainer.create_scheduler(
+- [ ] Trainer.evaluate(
+- [ ] Trainer.floating_point_ops(
+- [ ] Trainer.get_eval_dataloader(
+- [ ] Trainer.get_test_dataloader(
+- [ ] Trainer.get_train_dataloader(
+- [ ] Trainer.hyperparameter_search(
+- [ ] Trainer.is_local_process_zero(
+- [ ] Trainer.is_world_process_zero(
+- [ ] Trainer.log(
+- [ ] Trainer.log_metrics(
+- [ ] Trainer.metrics_format(
+- [ ] Trainer.mro(
+- [ ] Trainer.num_examples(
+- [ ] Trainer.pop_callback(
+- [ ] Trainer.predict(
+- [ ] Trainer.prediction_loop(
+- [ ] Trainer.prediction_step(
+- [ ] Trainer.remove_callback(
+- [ ] Trainer.save_metrics(
+- [ ] Trainer.save_model(
+- [ ] Trainer.save_state(
+- [ ] Trainer.store_flos(
+- [ ] Trainer.train(
+- [ ] Trainer.training_step(
 
 ## `pipelines`
 
@@ -69,5 +93,5 @@
 
 - atec
 - zh_wiki
-- [ ] en_wiki
+- [x] en_wiki
 - [ ] zh_csqa
