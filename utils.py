@@ -172,9 +172,11 @@ def save_kernel_and_bias(kernel, bias, model_path):
 
 def vector_l2_normlize(vecs):
     if isinstance(vecs, np.ndarray):
-        return vecs/np.sqrt((vecs**2).sum(axis=1, keepdims=True))
+        norms = np.sqrt((vecs**2).sum(axis=1, keepdims=True))
+        return vecs/np.clip(norms, 1e-8, np.inf) 
     elif isinstance(vecs, torch.Tensor):
-        return vecs/torch.sqrt((vecs**2).sum(dim=1, keepdims=True))
+        norms = torch.sqrt((vecs**2).sum(dim=1, keepdims=True))
+        return vecs/ torch.clamp(norms, 1e-8, np.inf)
     else:
         raise NotImplementedError()
 

@@ -232,6 +232,13 @@ class processor:
                             else 1 for i in line]) - 2 for line in examples['input_ids']]
         return examples
 
+def get_hf_ds_scripts_path(ds_name):
+    relative_path={
+        'atec':'hfds_scripts/atec_dataset.py'
+    }
+
+    return os.path.join(os.path.dirname(__file__), relative_path[ds_name])
+
 
 if __name__ == '__main__':
     from utils import get_tokenizer
